@@ -1,0 +1,242 @@
+%% 
+%% 
+fid=fopen('ttime_1e4_1e24_0417.dat','r');
+totaln = 1e4;
+line = fgetl(fid);
+str=sscanf(line, '%s')
+    
+for ii=1:8
+    for jj=1:totaln
+    line = fgetl(fid);
+    str=sscanf(line, '%f');
+    ttime(ii,jj)=str;
+    
+    end
+end
+fclose(fid)
+
+%%  whole time 
+%  ['start' 'end' 'lifetime' 'W' 'with residence time']
+figure
+totaln=1e4;
+chia=10;
+ttime_line = zeros(totaln, 1);
+ttime_line(:) = ttime(3,:);
+hist(ttime_line)
+%bar(h_time1,'w');title('Time');
+hold on;
+plot(h_time1,'k--');title('Time')
+
+%%  whole time 
+%  % ['start' 'end' 'lifetime' 'W' 'with residence time']
+nn=ceil(chia*9+1);
+h_time=zeros(nn,1);
+for n=1:totaln
+   if(ttime(5,n)==0),continue;end
+   aa=log(ttime(5,n))/log(10^(1/chia));
+   num=ceil(aa)+1;
+   h_time(num)=h_time(num)+1;
+end
+h_time=h_time./totaln;
+%hold on;bar(h_time,'w');title('Time')
+hold on; plot(h_time,'k');
+%% 
+legend('Location','NorthWest','Whole simulation time','without nightside residence');
+gcapoint1=[1 1+chia*1 1+chia*2 1+chia*3 1+chia*4 1+chia*5 1+chia*6 1+chia*7];
+gcapoint2=[0 0.0500 0.100 0.1500 0.200 0.2500 0.300 0.35 0.4];
+set(gca,'xtick',[gcapoint1]);
+set(gca,'ytick',[gcapoint2]);
+set(gca,'xticklabel',{'0','1','10','100','1e3','1e4','1e5','1e6','1e7'});
+set(gca,'yticklabel',{'0%','5%','10%','15%','20%','25%','30%','35%','40%'});
+title('Time [sec]')
+xlabel('Travel Time[s]');
+ylabel('Number of Particles');
+%% Sublimation pressure map
+fid=fopen('VaporP_Ceres.dat','r');
+figure
+    line = fgetl(fid)
+PV_H2O=zeros(ftd,ffd);
+for ii=1:ftd
+    for jj=1:ffd
+    line = fgetl(fid);
+    str=sscanf(line, '%f');
+    P_H2O(ii,jj)=str;
+    end
+end
+fclose(fid);
+for td=1:ftd
+    plotP(td,:)=P_H2O(ftd-td+1,:);
+end
+subplot(2,1,2);
+plotPV=log10(plotP);
+imagesc(plotP)
+colormap jet
+colorbar
+hold on;
+colorbar
+gcapoint2=[1 ceil(ftd/2) ftd];
+set(gca,'ytick',gcapoint2);
+set(gca,'yticklabel',{'Northern Cap','0','Southern Cap'});
+gcapoint1=[1+1 ceil(ffd/4)+1 ceil(ffd/2)+1 ceil(3*ffd/4)+1 ffd];
+set(gca,'xtick',gcapoint1);
+set(gca,'xticklabel',{'0','6','12','18','24'});
+xlabel('Local Time');
+ylabel('latitude');
+title('Partial Vapor Pressure of H_2O in Pa');
+%% sublimation rate map
+fid=fopen('VaporRate_Ceres.dat','r');
+
+    line = fgetl(fid)
+PV_H2O=zeros(ftd,ffd);
+for ii=1:ftd
+    for jj=1:ffd
+    line = fgetl(fid);
+    str=sscanf(line, '%f');
+    PV_H2O(ii,jj)=str;
+    end
+end
+fclose(fid);
+for td=1:ftd
+    plotPV(td,:)=PV_H2O(ftd-td+1,:);
+end
+plotPV=log10(plotPV);
+subplot(2,1,1);
+imagesc(plotPV)
+colormap jet
+colorbar
+hold on;
+colorbar
+gcapoint2=[1 ceil(ftd/2) ftd];
+set(gca,'ytick',gcapoint2);
+set(gca,'yticklabel',{'Northern Cap','0','Southern Cap'});
+gcapoint1=[1+1 ceil(ffd/4)+1 ceil(ffd/2)+1 ceil(3*ffd/4)+1 ffd];
+set(gca,'xtick',gcapoint1);
+set(gca,'xticklabel',{'0','6','12','18','24'});
+xlabel('Local Time');
+ylabel('latitude');
+title('Vaporization Rate map in log_1_0 [molecules-m^-^2-s^-^1]');
+
+%% White Salts
+figure
+for td=1:ftd
+    plotT(td,:)=copyT(1,ftd-td+1,:);
+end
+imagesc(plotT(:,:));
+hold on;
+[C,h] = contour(plotT,'w');
+set(h,'ShowText','on','TextStep',get(h,'LevelStep')*2)
+colormap jet
+colorbar
+hold on;
+colorbar
+gcapoint2=[1 ceil(ftd/2) ftd];
+set(gca,'ytick',gcapoint2);
+set(gca,'yticklabel',{'Northern Cap','0','Southern Cap'});
+gcapoint1=[1+1 ceil(ffd/4)+1 ceil(ffd/2)+1 ceil(3*ffd/4)+1 ffd];
+set(gca,'xtick',gcapoint1);
+set(gca,'xticklabel',{'0','6','12','18','24'});
+xlabel('Local Time');
+ylabel('latitude');
+hold on;
+for n=1:1e4
+    yy=ftd-(-ttime(1,n)+pi/2)/pi*ftd+1;
+    xx=ttime(6,n)/2/pi*ffd;
+    plot(xx,yy,'w');
+    hold on;
+end
+title('Source position of ballistic motion model');
+%% Photon-dissociation percentage
+totaln=ouou+1e4-sum(ttime(4,:))+sum(sum(horizon(:,:)));
+oo=ouou/totaln;
+fprintf('Escaped percentage is %5.2f %% \n',oo*1e2)
+pp=(1e4-sum(ttime(4,:)))./totaln;
+fprintf('Photo-dissociation percentage is %9.6f %% \n',pp*1e2)
+ss=sum(sum(horizon(1:ftd/2,:)))/totaln;
+fprintf('percentage of getting in the cold traps in southern polar cap is %5.2f %% \n',ss*1e2)
+nn=sum(sum(horizon(ftd/2+1:ftd,:)))/totaln;
+fprintf('percentage of getting in the cold traps in northern polar cap is %5.2f %% \n',nn*1e2)
+disp(ss+nn+pp+oo)
+%% Average of theexospheric model
+copy_den=den_atm;
+%% Read the atmospheric density
+fid=fopen('3Den_882_1e4.dat','r');
+for ii=1:2
+    line = fgetl(fid);
+    %str=sscanf(line,'%d');
+    str=sscanf(line, '%f');
+    if(ii==1),ay=str;end
+    if(ii==2),by=str;end
+end
+ftd=ay;
+ffd=by;
+den_atm=zeros(100,ftd,ffd);
+for time=1:100
+for ii=1:ftd
+    for jj=1:ffd
+    line = fgetl(fid);
+    str=sscanf(line, '%f');
+    den_atm(time,ii,jj)=str;
+    end
+end
+end
+fclose(fid);
+%% 
+den_atm=den_atm+copy_den;
+%% 
+%%  Average
+figure
+plot_den=zeros(hd,ftd);
+for ht=1:hd
+    for td=1:ftd
+        if(sum(copy_atm(ht,td,:))<=0),plot_den(ht,td)=0;continue;end
+        plot_den(ht,td)=log10(sum(copy_atm(ht,td,:)));
+    end
+end
+imagesc(plot_den);
+hold on;
+colorbar
+gcapoint1=[1 hd/2 hd];
+gcapoint2=[1 ceil(ftd/2) ftd];
+set(gca,'ytick',gcapoint1);
+set(gca,'xtick',gcapoint2);
+set(gca,'xticklabel',{'-90','0','90'});
+RR=(maxheight-Radii)/1000;
+RR2=RR/2;
+str=num2str(RR);
+str2=num2str(RR2);
+set(gca,'yticklabel',{'horizon',str2,str});
+xlabel('latitude');
+ylabel('distance [km]');
+aa=['Local Time = 12:00     ' 'Number desity by log_1_0(N) in [#^.m^-^3]'];
+title(aa);
+%% Calculate the different fraction of escaped particles 
+mmass=18e-3;
+k=8.31;
+nnn=1;
+num=zeros(21,1);
+MA=zeros(20,1);
+for MIV_T=60:20:180
+pp=0;
+qq=0;
+    mrv=sqrt(4*k*MIV_T/mmass);
+    mrv2=sqrt(2*k*MIV_T/mmass);
+    mrve=sqrt(2/pi*(mmass/k/MIV_T)^3)*ve^2*exp(-mmass*ve^2/2/k/MIV_T);
+    mry=sqrt(2/pi*(mmass/k/MIV_T)^3)*mrv2^2*exp(-mmass*mrv2^2/2/k/MIV_T);
+for n=1:1e5
+    vv=(rand-0.5)*mrv+mrv;
+    aa=sqrt(2/pi*(mmass/k/MIV_T)^3)*vv^2*exp(-mmass*vv^2/2/k/MIV_T);
+    yy=rand*mry;
+    if(yy<=aa),pp=pp+1;end
+end
+for n=1:1e5
+    yy=rand*mrve;
+    vv=ve+rand*100;
+    aa=sqrt(2/pi*(mmass/k/MIV_T)^3)*vv^2*exp(-mmass*vv^2/2/k/MIV_T);
+    if(yy/aa<=1&&vv>=ve),qq=qq+1;end
+end
+fprintf('pp= %9.8f, qq=%9.8f\n',pp,qq);
+pp=pp./1e5.*mry;
+qq=qq/1e5*mrve*100/(2*mrv2+100);
+MA(ceil(MIV_T/10))=qq/pp;
+end
+disp(MA)
